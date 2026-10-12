@@ -7,6 +7,9 @@
 #include "Global.h"
 #include "Lcd.h"
 #include "Lfo.h"
+#if SG_PLAITS
+#include "PlaitsVoice.h"
+#endif
 #include "fatfs.h"
 #include "main.h"
 #include "sdmmc.h"
@@ -144,6 +147,23 @@ bool recordBeat;
     uint8_t powerButtonCounter;
 
     bool mainMenuButtonFlag;
+
+#if SG_PLAITS
+    // Plaits-Seite: zweite Ansicht des Hauptmenues (lange CENTER-Taste im Hauptmenue)
+    bool plaitsPage = false;
+    int8_t plaitsTab = 0;
+    int8_t plaitsBeatNum = -1;  // Beat-Slot, dessen Note gerade in Plaits klingt
+    // CPU-Last des Audio-Interrupts
+    uint32_t audioCyclesAccum = 0;
+    uint32_t audioBlocksAccum = 0;
+    uint8_t audioLoadPercent = 0;
+    uint8_t audioLoadShown = 255;
+    uint32_t plaitsLoadTick = 0;
+    // MIDI-CC-Empfang
+    uint8_t rxCcReadStage = 0;
+    uint8_t rxCcNumber = 0;
+    volatile uint8_t plaitsDirtyMask = 0;  // per MIDI-CC geaenderte Spalten (Bit = Spalte)
+#endif
 
     bool upButtonFlag;
     bool downButtonFlag;
@@ -634,6 +654,19 @@ public:
     /* Main functions --------------------------------------------------------*/
 
     void main_select();
+#if SG_PLAITS
+    void plaits_togglePage();
+    void plaits_menuLeft();
+    void plaits_menuRight();
+    void plaits_menuUp();
+    void plaits_menuDown();
+    void plaits_handleMidiCC(uint8_t cc_, uint8_t value_);
+    void plaits_updateLoad();
+    void lcd_drawPlaitsPage();
+    void lcd_drawPlaitsHeader(uint8_t tab_);
+    void lcd_drawPlaitsData(uint8_t tab_);
+    void lcd_drawPlaitsLoad();
+#endif
 
     /* File functions --------------------------------------------------------*/
 

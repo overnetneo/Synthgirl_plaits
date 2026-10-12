@@ -25,6 +25,14 @@ uint32_t i2s_txBuffer[I2S_TOTAL_BUFFER_SIZE] = {0x00};
 int main() {
     __set_FPSCR(__get_FPSCR() | (1U << 24) | (1U << 25));
 
+#if SG_PLAITS
+    // Instruktions-Cache an: Code laeuft aus dem Flash (3 Wartezyklen), ohne Cache
+    // waere die Plaits-Engine deutlich langsamer. Der D-Cache bleibt bewusst aus,
+    // weil I2S-, SD- und UART-DMA sonst Cache-Pflege braeuchten.
+    SCB_EnableICache();
+    // Der DWT-Zyklenzaehler (CPU-Last-Anzeige) wird bereits von dwt_initialize() gestartet.
+#endif
+
     HAL_Init();
 
     SystemClock_Config();
@@ -121,7 +129,24 @@ extern "C" void PeriphCommonClock_Config() {
     PeriphClkInitStruct.PLL2.PLL2FRACN = 0;
     PeriphClkInitStruct.FmcClockSelection = RCC_FMCCLKSOURCE_PLL2;
     PeriphClkInitStruct.SdmmcClockSelection = RCC_SDMMCCLKSOURCE_PLL2;
+#if SG_FIX_SAMPLERATE
+    // I2S-Takt aus PLL3 statt PLL2: PLL2 (240 MHz) ergibt mit dem I2S-Teiler nur
+    // 240 MHz / (256 * 21) = 44642,9 Hz statt 44100 Hz -> alles klang ~21 Cent zu hoch.
+    // PLL3: 8 MHz / 2 * (45 + 1298/8192) = 180,6338 MHz VCO, / 4 = 45,15845 MHz
+    //       = 256 * 4 * 44100,05 Hz -> I2S-Teiler 4, Abweichung < 0,001 %.
+    PeriphClkInitStruct.PeriphClockSelection |= RCC_PERIPHCLK_SPI123;
+    PeriphClkInitStruct.PLL3.PLL3M = 2;
+    PeriphClkInitStruct.PLL3.PLL3N = 45;
+    PeriphClkInitStruct.PLL3.PLL3P = 4;
+    PeriphClkInitStruct.PLL3.PLL3Q = 4;
+    PeriphClkInitStruct.PLL3.PLL3R = 4;
+    PeriphClkInitStruct.PLL3.PLL3RGE = RCC_PLL3VCIRANGE_2;
+    PeriphClkInitStruct.PLL3.PLL3VCOSEL = RCC_PLL3VCOMEDIUM;
+    PeriphClkInitStruct.PLL3.PLL3FRACN = 1298;
+    PeriphClkInitStruct.Spi123ClockSelection = RCC_SPI123CLKSOURCE_PLL3;
+#else
     PeriphClkInitStruct.Spi123ClockSelection = RCC_SPI123CLKSOURCE_PLL2;
+#endif
     if (HAL_RCCEx_PeriphCLKConfig(&PeriphClkInitStruct) != HAL_OK) {
         Error_Handler();
     }

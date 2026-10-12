@@ -1,5 +1,10 @@
 #include "Controller.h"
 
+#if SG_PLAITS
+// Plaits-Stimme (Zustand liegt intern im DTCM, siehe PlaitsVoice.cpp)
+PlaitsVoice plaitsVoice;
+#endif
+
 Controller::Controller()
     : lcd(LANDSCAPE_1, WHITE, BLACK, FONT_07x09),
       dac(),
@@ -136,6 +141,10 @@ Controller::Controller()
 Controller::~Controller() {}
 
 void Controller::initialize() {
+#if SG_PLAITS
+    plaitsVoice.Init();
+    plaitsVoice.setActive(true);  // Testfirmware: Plaits ist ab dem Start aktiv
+#endif
     eq.initialize();
     filter[0].initialize();
     filter[1].initialize();
@@ -222,6 +231,9 @@ void Controller::systemUpdate_A() {
 void Controller::systemUpdate_B() {
     keyboard_check_B();
     lcd_update();
+#if SG_PLAITS
+    plaits_updateLoad();
+#endif
 
     if (!sd.ready) {
         sd_reinitialize();
@@ -684,6 +696,24 @@ void Controller::receiveMidiCommand() {
         return;
     }
 
+#if SG_PLAITS
+    // Control Change (Bxh cc val) auf dem Empfangskanal -> Plaits-Parameter
+    if (rxData == (0xB0 + system.midi.rxChannel)) {
+        rxCcReadStage = 1;
+        return;
+    } else if (rxData & 0x80) {
+        rxCcReadStage = 0;  // anderer Status unterbricht eine halbe CC-Nachricht
+    } else if (rxCcReadStage == 1) {
+        rxCcNumber = rxData;
+        rxCcReadStage = 2;
+        return;
+    } else if (rxCcReadStage == 2) {
+        plaits_handleMidiCC(rxCcNumber, rxData);
+        rxCcReadStage = 0;
+        return;
+    }
+#endif
+
     if (!system.midi.rxNotes) {
         return;
     }
@@ -969,7 +999,12 @@ void Controller::keyboard_check_B() {
                     startUpDownButtonTimer();
                     switch (menu) {
                         case INIT_MENU:
+                            break;
+
                         case MAIN_MENU:
+#if SG_PLAITS
+                            if (plaitsPage) plaits_menuUp();
+#endif
                             break;
 
                         case FILE_MENU:
@@ -1047,7 +1082,12 @@ void Controller::keyboard_check_B() {
                     startUpDownButtonTimer();
                     switch (menu) {
                         case INIT_MENU:
+                            break;
+
                         case MAIN_MENU:
+#if SG_PLAITS
+                            if (plaitsPage) plaits_menuDown();
+#endif
                             break;
 
                         case FILE_MENU:
@@ -1121,7 +1161,12 @@ void Controller::keyboard_check_B() {
                 if (!alertFlag) {
                     switch (menu) {
                         case INIT_MENU:
+                            break;
+
                         case MAIN_MENU:
+#if SG_PLAITS
+                            if (plaitsPage) plaits_menuLeft();
+#endif
                             break;
 
                         case FILE_MENU:
@@ -1195,7 +1240,12 @@ void Controller::keyboard_check_B() {
                 if (!alertFlag) {
                     switch (menu) {
                         case INIT_MENU:
+                            break;
+
                         case MAIN_MENU:
+#if SG_PLAITS
+                            if (plaitsPage) plaits_menuRight();
+#endif
                             break;
 
                         case FILE_MENU:
@@ -4886,6 +4936,12 @@ void Controller::lcd_setSongDataState() {
 // main menu functions
 
 void Controller::lcd_drawMainMenu() {
+#if SG_PLAITS
+    if (plaitsPage) {
+        lcd_drawPlaitsPage();
+        return;
+    }
+#endif
     lcd_drawMenuIcon(MAIN_MENU);
 
     lcd_setMenuHeaderState(CYAN);
@@ -4913,6 +4969,9 @@ void Controller::lcd_drawMainMenu() {
 }
 
 void Controller::lcd_drawMain_TempoData() {
+#if SG_PLAITS
+    if (plaitsPage) return;
+#endif
     lcd.setAlignment(CENTER);
     lcd.setFont(FONT_07x09);
     lcd.setForeColor(kLayerColorPalette[0]);
@@ -4922,6 +4981,9 @@ void Controller::lcd_drawMain_TempoData() {
 }
 
 void Controller::lcd_drawMain_MeasureData() {
+#if SG_PLAITS
+    if (plaitsPage) return;
+#endif
     lcd.setAlignment(CENTER);
     lcd.setFont(FONT_07x09);
     lcd.setForeColor(kLayerColorPalette[1]);
@@ -4931,6 +4993,9 @@ void Controller::lcd_drawMain_MeasureData() {
 }
 
 void Controller::lcd_drawMain_BarData() {
+#if SG_PLAITS
+    if (plaitsPage) return;
+#endif
     lcd.setAlignment(CENTER);
     lcd.setFont(FONT_07x09);
     lcd.setForeColor(kLayerColorPalette[2]);
@@ -4940,6 +5005,9 @@ void Controller::lcd_drawMain_BarData() {
 }
 
 void Controller::lcd_drawMain_QuantizeData() {
+#if SG_PLAITS
+    if (plaitsPage) return;
+#endif
     lcd.setAlignment(CENTER);
     lcd.setFont(FONT_07x09);
     lcd.setForeColor(kLayerColorPalette[3]);
@@ -4947,6 +5015,9 @@ void Controller::lcd_drawMain_QuantizeData() {
 }
 
 void Controller::lcd_drawMain_Filter0Data() {
+#if SG_PLAITS
+    if (plaitsPage) return;
+#endif
     lcd.setAlignment(CENTER);
     lcd.setFont(FONT_07x09);
     lcd.setForeColor(kLayerColorPalette[4]);
@@ -4954,6 +5025,9 @@ void Controller::lcd_drawMain_Filter0Data() {
 }
 
 void Controller::lcd_drawMain_Filter1Data() {
+#if SG_PLAITS
+    if (plaitsPage) return;
+#endif
     lcd.setAlignment(CENTER);
     lcd.setFont(FONT_07x09);
     lcd.setForeColor(kLayerColorPalette[5]);
@@ -4961,6 +5035,9 @@ void Controller::lcd_drawMain_Filter1Data() {
 }
 
 void Controller::lcd_drawMain_Effect0Data() {
+#if SG_PLAITS
+    if (plaitsPage) return;
+#endif
     lcd.setAlignment(CENTER);
     lcd.setFont(FONT_07x09);
     lcd.setForeColor(kLayerColorPalette[7]);
@@ -4968,6 +5045,9 @@ void Controller::lcd_drawMain_Effect0Data() {
 }
 
 void Controller::lcd_drawMain_Effect1Data() {
+#if SG_PLAITS
+    if (plaitsPage) return;
+#endif
     lcd.setAlignment(CENTER);
     lcd.setFont(FONT_07x09);
     lcd.setForeColor(kLayerColorPalette[8]);
@@ -7722,7 +7802,166 @@ void Controller::main_select() {
         lcd_transitionSelect();
         lcd_drawMainMenu();
     }
+#if SG_PLAITS
+    else {
+        plaits_togglePage();
+    }
+#endif
 }
+
+#if SG_PLAITS
+/* Plaits functions ----------------------------------------------------------*/
+
+// Lange CENTER-Taste im Hauptmenue wechselt zwischen Hauptseite und Plaits-Seite.
+void Controller::plaits_togglePage() {
+    plaitsPage = !plaitsPage;
+    lcd.setForeColor(WHITE);
+    lcd.setBackColor(BLACK);
+    for (uint8_t i = 0; i < 4; i++) {
+        lcd.clearRect(kMenuLine4X[i] + 1, 29, 161, 61);
+    }
+    lcd.clearRect(kMenuNumberX, kMenuNumberY, 24, 12);
+    audioLoadShown = 255;
+    lcd_drawMainMenu();
+}
+
+void Controller::plaits_menuLeft() {
+    if (plaitsTab > 0) {
+        plaitsTab -= 1;
+        lcd_drawPlaitsHeader(plaitsTab + 1);
+        lcd_drawPlaitsHeader(plaitsTab);
+    }
+}
+
+void Controller::plaits_menuRight() {
+    if (plaitsTab < (PlaitsVoice::P_COUNT - 1)) {
+        plaitsTab += 1;
+        lcd_drawPlaitsHeader(plaitsTab - 1);
+        lcd_drawPlaitsHeader(plaitsTab);
+    }
+}
+
+void Controller::plaits_menuUp() {
+    plaitsVoice.step((PlaitsVoice::Param)plaitsTab, +1);
+    lcd_drawPlaitsData(plaitsTab);
+}
+
+void Controller::plaits_menuDown() {
+    plaitsVoice.step((PlaitsVoice::Param)plaitsTab, -1);
+    lcd_drawPlaitsData(plaitsTab);
+}
+
+// MIDI-CC 20..27 auf dem eingestellten MIDI-Empfangskanal:
+// 20 Modell, 21 HARMONICS, 22 TIMBRE, 23 MORPH, 24 DECAY, 25 LPG-Farbe,
+// 26 Huellkurve (<64 GATE, >=64 PING), 27 Plaits aus/an (<64 aus, >=64 an).
+void Controller::plaits_handleMidiCC(uint8_t cc_, uint8_t value_) {
+    if ((cc_ < 20) || (cc_ > 27)) return;
+    uint8_t tab = cc_ - 20;
+    switch (tab) {
+        case PlaitsVoice::P_ENGINE:
+            plaitsVoice.setEngine((value_ * PlaitsVoice::kNumEngines) / 128);
+            break;
+        case PlaitsVoice::P_ENVMODE:
+            plaitsVoice.setEnvMode(value_ >= 64 ? PlaitsVoice::ENV_PING : PlaitsVoice::ENV_GATE);
+            break;
+        case PlaitsVoice::P_ACTIVE:
+            plaitsVoice.setActive(value_ >= 64);
+            break;
+        default:
+            plaitsVoice.setParam((PlaitsVoice::Param)tab, value_ / 127.0f);
+            break;
+    }
+    plaitsDirtyMask |= (uint8_t)(1U << tab);
+}
+
+// Hauptschleife: CPU-Last berechnen und MIDI-CC-Aenderungen anzeigen.
+void Controller::plaits_updateLoad() {
+    uint32_t now = HAL_GetTick();
+    if ((now - plaitsLoadTick) >= 500) {
+        plaitsLoadTick = now;
+        __disable_irq();
+        uint32_t cycles = audioCyclesAccum;
+        uint32_t blocks = audioBlocksAccum;
+        audioCyclesAccum = 0;
+        audioBlocksAccum = 0;
+        __enable_irq();
+        if (blocks > 0) {
+            // Verfuegbare Zyklen pro 16er-Block = CPU-Takt * 16 / 44100
+            float budget = (float)SystemCoreClock * (float)I2S_BLOCK_SIZE / (float)kAudioSampleRate;
+            float load = 100.0f * ((float)cycles / (float)blocks) / budget;
+            audioLoadPercent = (load > 99.0f) ? 99 : (uint8_t)load;
+        }
+    }
+
+    if ((menu == MAIN_MENU) && plaitsPage && (!alertFlag)) {
+        uint8_t dirty = plaitsDirtyMask;
+        if (dirty) {
+            plaitsDirtyMask = 0;
+            for (uint8_t i = 0; i < PlaitsVoice::P_COUNT; i++) {
+                if (dirty & (1U << i)) lcd_drawPlaitsData(i);
+            }
+        }
+        if (audioLoadPercent != audioLoadShown) {
+            lcd_drawPlaitsLoad();
+        }
+    }
+}
+
+void Controller::lcd_drawPlaitsPage() {
+    lcd_drawMenuIcon(MAIN_MENU);  // setzt Schrift/Abstand wie im Hauptmenue
+    lcd.setForeColor(WHITE);
+    lcd.setBackColor(BLACK);
+    lcd.setFont(FONT_10x14);
+    lcd.setAlignment(LEFT);
+    lcd.clearRect(kMenuIconX, kMenuIconY, 38, 15);
+    lcd.drawText("PLT", 3, kMenuIconX, kMenuIconY);
+
+    lcd_setMainMenuHeaderState();
+    for (uint8_t i = 1; i < 8; i++) {
+        lcd.drawVLine(kMenuLine8X[i], kMenuLineY, kMenuLineHeight);
+    }
+    for (uint8_t i = 0; i < PlaitsVoice::P_COUNT; i++) {
+        lcd_drawPlaitsHeader(i);
+        lcd_drawPlaitsData(i);
+    }
+    audioLoadShown = 255;
+    lcd_drawPlaitsLoad();
+}
+
+void Controller::lcd_drawPlaitsHeader(uint8_t tab_) {
+    lcd.setForeColor((tab_ == plaitsTab) ? CYAN : WHITE);
+    lcd.setBackColor(BLACK);
+    lcd.setFont(FONT_05x07);
+    lcd.setAlignment(CENTER);
+    lcd.drawText(PlaitsVoice::paramTitle((PlaitsVoice::Param)tab_), 3, kMainMenuX[tab_], kMainMenuHeaderY);
+    // Markierung unter der Ueberschrift der gewaehlten Spalte
+    lcd.setForeColor((tab_ == plaitsTab) ? CYAN : BLACK);
+    lcd.drawHLine(kMainMenuX[tab_] - 10, kMainMenuHeaderY + 11, 21);
+}
+
+void Controller::lcd_drawPlaitsData(uint8_t tab_) {
+    char text[4];
+    plaitsVoice.format((PlaitsVoice::Param)tab_, text);
+    lcd.setBackColor(BLACK);
+    lcd.setAlignment(CENTER);
+    lcd.setFont(FONT_07x09);
+    lcd.setForeColor(kLayerColorPalette[tab_]);
+    lcd.drawText(text, 3, kMainMenuX[tab_], kMainMenuDataY);
+}
+
+// CPU-Last des Audio-Interrupts (Plaits + Effekte) links neben den Spalten, in %.
+void Controller::lcd_drawPlaitsLoad() {
+    uint8_t load = audioLoadPercent;
+    audioLoadShown = load;
+    char text[3];
+    sprintf(text, "%02d", load);
+    lcd.setBackColor(BLACK);
+    lcd.setAlignment(LEFT);
+    lcd.setFont(FONT_07x09);
+    lcd.setForeColor((load < 70) ? GREEN : ((load < 90) ? YELLOW : RED));
+    lcd.drawText(text, 2, kMenuNumberX, kMenuNumberY);
+}
+#endif
 
 /* File functions ------------------------------------------------------------*/
 
@@ -14295,6 +14534,12 @@ void Controller::startBeatPlayData(uint8_t beatNum_) {
     bD.sdramReadActive = true;
     bD.noteData = sD.startData.noteData;
 
+#if SG_PLAITS
+    // Jede neue Note (Tastatur, MIDI, Song-Wiedergabe) geht auch an Plaits.
+    plaitsBeatNum = beatNum_;
+    plaitsVoice.NoteOn(bD.noteData);
+#endif
+
     system.midi.txTriggerNoteOn[beatNum_] = true;
     system.midi.txDataNoteOn[beatNum_] = bD.noteData;
 
@@ -14589,6 +14834,14 @@ void Controller::startBeatPlayData(uint8_t beatNum_) {
 void Controller::releaseBeatPlayData(uint8_t beatNum_) {
     BeatPlayData& bD = sD.beatPlayData[beatNum_];
     EnvelopePlayData& eD = bD.envelopePlayData;
+
+#if SG_PLAITS
+    // Nur loslassen, wenn das die Note ist, die Plaits gerade spielt (legato-sicher).
+    if (beatNum_ == plaitsBeatNum) {
+        plaitsVoice.NoteOff();
+        plaitsBeatNum = -1;
+    }
+#endif
 
     system.midi.txTriggerNoteOff[beatNum_] = true;
     system.midi.txDataNoteOff[beatNum_] = bD.noteData;
@@ -15023,6 +15276,9 @@ bool Controller::checkSdramReadActive(uint8_t beatNum_) {
 /* Audio functions -----------------------------------------------------------*/
 
 void Controller::processAudioBlock(uint32_t* outputBuffer_) {
+#if SG_PLAITS
+    uint32_t cycleStart = DWT->CYCCNT;
+#endif
     processAudioMetronome();
     processAudioSong();
     processAudioEq();
@@ -15030,6 +15286,10 @@ void Controller::processAudioBlock(uint32_t* outputBuffer_) {
     processAudioEffect();
     processAudioReverb();
     processAudioSend(outputBuffer_);
+#if SG_PLAITS
+    audioCyclesAccum += DWT->CYCCNT - cycleStart;
+    audioBlocksAccum += 1;
+#endif
 }
 
 void Controller::processAudioMetronome() {
@@ -15103,6 +15363,20 @@ void Controller::processAudioSong() {
         }
         audioSongBlock[sampleIndex] = sample * system.volumeFloat;
     }
+
+#if SG_PLAITS
+    // Plaits ersetzt die Wavetable-Oszillatoren; Huellkurven-/Notenlogik oben laeuft
+    // weiter (fuer Song, MIDI-Out usw.), danach folgen EQ, Filter, Effekte, Reverb.
+    // Plaits liefert Spitzen bis 1.0; etwas Reserve fuer EQ/Effekte/Reverb.
+    const float kPlaitsGain = 0.7f;
+    if (plaitsVoice.active()) {
+        float plaitsBlock[I2S_BLOCK_SIZE];
+        plaitsVoice.Render(plaitsBlock, I2S_BLOCK_SIZE);
+        for (uint16_t i = 0; i < I2S_BLOCK_SIZE; i++) {
+            audioSongBlock[i] = plaitsBlock[i] * kPlaitsGain * system.volumeFloat;
+        }
+    }
+#endif
 
     audioSong = audioSongBlock[0];
 }
@@ -16761,6 +17035,15 @@ void Controller::interruptUpDownButtonRead() {
         if (!alertFlag) {
             if (upButtonFlag) {
                 switch (menu) {
+#if SG_PLAITS
+                    case MAIN_MENU:
+                        // Wiederholung nur fuer Zahlenwerte, nicht fuer Umschalter
+                        if (plaitsPage && (plaitsTab >= PlaitsVoice::P_HARMONICS) && (plaitsTab <= PlaitsVoice::P_COLOUR)) {
+                            plaits_menuUp();
+                        }
+                        break;
+#endif
+
                     case FILE_MENU:
                         file_menuUp();
                         break;
@@ -16867,6 +17150,15 @@ void Controller::interruptUpDownButtonRead() {
                 }
             } else if (downButtonFlag) {
                 switch (menu) {
+#if SG_PLAITS
+                    case MAIN_MENU:
+                        // Wiederholung nur fuer Zahlenwerte, nicht fuer Umschalter
+                        if (plaitsPage && (plaitsTab >= PlaitsVoice::P_HARMONICS) && (plaitsTab <= PlaitsVoice::P_COLOUR)) {
+                            plaits_menuDown();
+                        }
+                        break;
+#endif
+
                     case FILE_MENU:
                         file_menuDown();
                         break;

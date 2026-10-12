@@ -162,6 +162,16 @@ SECTIONS
     . = ALIGN(8);
   } >RAM_D1
 
+  /* Synthgirl/Plaits: schneller, nicht initialisierter Speicher im DTCM.
+     Wird vom Code selbst initialisiert (PlaitsVoice::Init). Nicht per DMA erreichbar. */
+  .dtcm_bss (NOLOAD) :
+  {
+    . = ALIGN(8);
+    *(.dtcm_bss)
+    *(.dtcm_bss*)
+    . = ALIGN(8);
+  } >DTCMRAM
+
   /* Remove information from the standard libraries */
   /DISCARD/ :
   {
