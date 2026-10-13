@@ -7939,7 +7939,7 @@ void Controller::lcd_drawPlaitsPage() {
     // Diagnose-Zeile unter den Spalten
     char diag[96];
     if (sgDiagRecord.type == SG_DIAG_NONE) {
-        sprintf(diag, "DIAG 1.92: KEIN FEHLER GESPEICHERT");
+        sprintf(diag, "DIAG 1.93: KEIN FEHLER GESPEICHERT");
     } else {
         const char* kind = (sgDiagRecord.type == SG_DIAG_FAULT) ? "FAULT" : ((sgDiagRecord.type == SG_DIAG_AUDIO_HANG) ? "AUDIO" : "MAIN");
         sprintf(diag, "%s N%lu PC %08lX LR %08lX C %04lX CF %08lX HF %08lX",

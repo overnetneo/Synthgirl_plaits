@@ -31,6 +31,7 @@ typedef struct {
     uint32_t bfar;
     uint32_t mmfar;
     uint32_t crumb;
+    uint32_t check;  /* Pruefsumme: nur gueltige Datensaetze werden angezeigt */
 } SgDiagRecord;
 
 #if SG_DIAG

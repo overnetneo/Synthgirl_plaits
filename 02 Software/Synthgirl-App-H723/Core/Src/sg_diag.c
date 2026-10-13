@@ -6,7 +6,7 @@
  *  - TIM2 (hoechste Prioritaet, 100 Hz) ueberwacht zwei Herzschlaege: den Audio-
  *    Interrupt und die Hauptschleife. Steht einer still, wird der unterbrochene
  *    Programmzaehler (PC) gesichert und neu gestartet.
- *  Die Daten liegen im SRAM4 (RAM_D3), der einen Software-Reset ueberlebt, und
+ *  Die Daten liegen im DTCM, der einen Software-Reset ueberlebt, und
  *  werden nach dem Neustart auf der Plaits-Seite angezeigt.
  */
 #include "sg_diag.h"
@@ -15,8 +15,16 @@
 
 #include "stm32h7xx.h"
 
-__attribute__((section(".diag_noinit"))) volatile SgDiagRecord sgDiagRecord;
-__attribute__((section(".diag_noinit"))) volatile uint32_t sgDiagCrumb;
+/* Im DTCM (wird beim Start weder vom Bootloader noch von der App geloescht).
+   Version 1.92 nutzte SRAM4, das lieferte auf dem Geraet nur Datenmuell. */
+__attribute__((section(".dtcm_bss"))) volatile SgDiagRecord sgDiagRecord;
+__attribute__((section(".dtcm_bss"))) volatile uint32_t sgDiagCrumb;
+
+static uint32_t checksum(void) {
+    return SG_DIAG_MAGIC ^ 0xA5A5A5A5u ^ sgDiagRecord.type ^ (sgDiagRecord.count * 3u) ^ sgDiagRecord.pc ^
+           (sgDiagRecord.lr << 1) ^ sgDiagRecord.cfsr ^ sgDiagRecord.hfsr ^ sgDiagRecord.bfar ^ sgDiagRecord.mmfar ^
+           (sgDiagRecord.crumb << 3);
+}
 
 volatile uint32_t sgDiagAudioBeat = 0;
 volatile uint32_t sgDiagMainBeat = 0;
@@ -36,6 +44,7 @@ static void saveAndReset(uint32_t type, const uint32_t* frame) {
     sgDiagRecord.crumb = sgDiagCrumb;
     sgDiagRecord.count += 1;
     sgDiagRecord.magic = SG_DIAG_MAGIC;
+    sgDiagRecord.check = checksum();
     __DSB();
     NVIC_SystemReset();
 }
@@ -74,13 +83,15 @@ SG_NAKED_ENTRY(UsageFault_Handler, sgDiag_faultC)
 SG_NAKED_ENTRY(TIM2_IRQHandler, sgDiag_tim2C)
 
 void sgDiag_init(void) {
-    if (sgDiagRecord.magic != SG_DIAG_MAGIC) {
+    if ((sgDiagRecord.magic != SG_DIAG_MAGIC) || (sgDiagRecord.check != checksum()) ||
+        (sgDiagRecord.type > SG_DIAG_MAIN_HANG)) {
         /* erster Start nach dem Einschalten: SRAM4 enthaelt Zufall */
         sgDiagRecord.type = SG_DIAG_NONE;
         sgDiagRecord.count = 0;
         sgDiagRecord.pc = sgDiagRecord.lr = sgDiagRecord.crumb = 0;
         sgDiagRecord.cfsr = sgDiagRecord.hfsr = sgDiagRecord.bfar = sgDiagRecord.mmfar = 0;
         sgDiagRecord.magic = SG_DIAG_MAGIC;
+        sgDiagRecord.check = checksum();
     }
     sgDiagCrumb = 0;
 
