@@ -38,7 +38,7 @@ CXX_SRC += $(wildcard Core/Library/PlaitsVoice/*.cpp) \
 endif
 
 CFLAGS   = $(MCU) $(DEFS) $(INCS) $(OPT) -g3 -ffunction-sections -fdata-sections -Wall -Wno-unused -fstack-usage
-CXXFLAGS = $(CFLAGS) -std=gnu++14 -fno-exceptions -fno-rtti -fno-threadsafe-statics -fno-use-cxa-atexit
+CXXFLAGS = $(CFLAGS) -std=gnu++14 -fno-lifetime-dse -fno-exceptions -fno-rtti -fno-threadsafe-statics -fno-use-cxa-atexit
 LDFLAGS  = $(MCU) -TSTM32H723ZGTX_FLASH.ld --specs=nosys.specs --specs=nano.specs -Wl,--gc-sections \
            -Wl,-Map=$(BUILD)/$(TARGET).map -Wl,--print-memory-usage -lstdc++ -lsupc++ -lm
 

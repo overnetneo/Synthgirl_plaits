@@ -43,7 +43,13 @@ inline float clamp01(float v) {
 }  // namespace
 
 void PlaitsVoice::Init() {
-    memset(voiceStorage, 0, sizeof(voiceStorage));
+    // Speicher nullen, BEVOR das Objekt konstruiert wird (der Konstruktor setzt die
+    // vtable-Zeiger der Engines). Achtung: Ein normales memset direkt vor "placement
+    // new" darf GCC als tote Speicherung entfernen (lifetime DSE) - genau das passierte
+    // in 1.90, der DTCM enthielt dann Reste. Schreiben ueber einen volatile-Zeiger wird
+    // nie wegoptimiert (zusaetzlich baut das Makefile mit -fno-lifetime-dse).
+    volatile uint8_t* p = voiceStorage;
+    for (size_t i = 0; i < sizeof(voiceStorage); ++i) p[i] = 0;
     memset(sharedBuffer, 0, sizeof(sharedBuffer));
     voice = new (voiceStorage) plaits::Voice();
     stmlib::BufferAllocator allocator(sharedBuffer, kSharedBufferSize);

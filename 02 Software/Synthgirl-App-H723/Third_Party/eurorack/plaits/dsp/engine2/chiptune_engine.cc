@@ -37,7 +37,10 @@ using namespace stmlib;
 
 void ChiptuneEngine::Init(BufferAllocator* allocator) {
   bass_.Init();
-  for (int i = 0; i < kChordNumNotes; ++i) {
+  // Synthgirl-Fix: voice_ hat kChordNumVoices Eintraege; das Original initialisierte
+  // nur kChordNumNotes. Der letzte Oszillator lief mit Speicherresten (auf dem
+  // Plaits-Modul zufaellig 0) -> NaN -> Endlosschleife in SuperSquareOscillator.
+  for (int i = 0; i < kChordNumVoices; ++i) {
     voice_[i].Init();
   }
   
