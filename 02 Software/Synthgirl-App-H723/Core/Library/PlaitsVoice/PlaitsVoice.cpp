@@ -1,4 +1,5 @@
 #include "PlaitsVoice.h"
+#include "sg_diag.h"
 
 #include <new>
 #include <string.h>
@@ -124,7 +125,9 @@ void PlaitsVoice::renderBlock() {
     }
 
     plaits::Voice::Frame frames[plaits::kBlockSize];
+    SG_CRUMB(0x100 | (engine_ << 4) | 0x1);
     voice->Render(patch, modulations, frames, plaits::kBlockSize);
+    SG_CRUMB(0x100 | (engine_ << 4) | 0xF);
 
     const float kInv = 1.0f / 32768.0f;
     for (size_t i = 0; i < plaits::kBlockSize; ++i) {

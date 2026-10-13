@@ -1,4 +1,5 @@
 #include "Controller.h"
+#include "sg_diag.h"
 
 #if SG_PLAITS
 // Plaits-Stimme (Zustand liegt intern im DTCM, siehe PlaitsVoice.cpp)
@@ -220,6 +221,9 @@ void Controller::systemStart() {
 void Controller::systemReset() {
     lcd.displayOff();
     HAL_Delay(1000);
+#if SG_DIAG
+    HAL_NVIC_DisableIRQ(TIM2_IRQn);  // Ausschalten ist kein Haenger
+#endif
     dac.audioOff();
     NVIC_SystemReset();
 }
@@ -233,6 +237,10 @@ void Controller::systemUpdate_B() {
     lcd_update();
 #if SG_PLAITS
     plaits_updateLoad();
+#endif
+#if SG_DIAG
+    sgDiagMainBeat++;
+    sgDiagArmMain = plaitsPage ? 1 : 0;
 #endif
 
     if (!sd.ready) {
@@ -7926,6 +7934,24 @@ void Controller::lcd_drawPlaitsPage() {
     }
     audioLoadShown = 255;
     lcd_drawPlaitsLoad();
+
+#if SG_DIAG
+    // Diagnose-Zeile unter den Spalten
+    char diag[96];
+    if (sgDiagRecord.type == SG_DIAG_NONE) {
+        sprintf(diag, "DIAG 1.92: KEIN FEHLER GESPEICHERT");
+    } else {
+        const char* kind = (sgDiagRecord.type == SG_DIAG_FAULT) ? "FAULT" : ((sgDiagRecord.type == SG_DIAG_AUDIO_HANG) ? "AUDIO" : "MAIN");
+        sprintf(diag, "%s N%lu PC %08lX LR %08lX C %04lX CF %08lX HF %08lX",
+                kind, (unsigned long)sgDiagRecord.count, (unsigned long)sgDiagRecord.pc, (unsigned long)sgDiagRecord.lr,
+                (unsigned long)sgDiagRecord.crumb, (unsigned long)sgDiagRecord.cfsr, (unsigned long)sgDiagRecord.hfsr);
+    }
+    lcd.setBackColor(BLACK);
+    lcd.setAlignment(LEFT);
+    lcd.setFont(FONT_05x07);
+    lcd.setForeColor((sgDiagRecord.type == SG_DIAG_NONE) ? GREEN : RED);
+    lcd.drawText(diag, strlen(diag), kMenuLine8X[0] + 4, 96);
+#endif
 }
 
 void Controller::lcd_drawPlaitsHeader(uint8_t tab_) {
@@ -15279,13 +15305,24 @@ void Controller::processAudioBlock(uint32_t* outputBuffer_) {
 #if SG_PLAITS
     uint32_t cycleStart = DWT->CYCCNT;
 #endif
+    SG_CRUMB(0x01);
     processAudioMetronome();
+    SG_CRUMB(0x02);
     processAudioSong();
+    SG_CRUMB(0x03);
     processAudioEq();
+    SG_CRUMB(0x04);
     processAudioFilter();
+    SG_CRUMB(0x05);
     processAudioEffect();
+    SG_CRUMB(0x06);
     processAudioReverb();
+    SG_CRUMB(0x07);
     processAudioSend(outputBuffer_);
+    SG_CRUMB(0x08);
+#if SG_DIAG
+    sgDiagAudioBeat++;
+#endif
 #if SG_PLAITS
     audioCyclesAccum += DWT->CYCCNT - cycleStart;
     audioBlocksAccum += 1;

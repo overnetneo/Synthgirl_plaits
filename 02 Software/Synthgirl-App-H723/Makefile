@@ -10,6 +10,8 @@ SZ      = $(PREFIX)size
 
 # Plaits-Engine ein-/ausschalten (make PLAITS=0 baut die Original-Firmware)
 PLAITS ?= 1
+# Diagnose-Firmware (make DIAG=1): Fehler/Haenger werden gespeichert und angezeigt
+DIAG ?= 0
 
 MCU   = -mcpu=cortex-m7 -mthumb -mfpu=fpv5-d16 -mfloat-abi=hard
 DEFS  = -DUSE_HAL_DRIVER -DSTM32H723xx -DUSE_PWR_LDO_SUPPLY
@@ -25,6 +27,10 @@ C_SRC   = $(wildcard Core/Src/*.c) $(wildcard Drivers/STM32H7xx_HAL_Driver/Src/*
           $(wildcard Middlewares/Third_Party/FatFs/src/*.c) $(wildcard Middlewares/Third_Party/FatFs/src/option/*.c)
 CXX_SRC = $(wildcard Core/Src/*.cpp) $(filter-out Core/Library/PlaitsVoice/%,$(wildcard Core/Library/*/*.cpp))
 ASM_SRC = Core/Startup/startup_stm32h723zgtx.s
+
+ifeq ($(DIAG),1)
+DEFS    += -DSG_DIAG=1
+endif
 
 ifeq ($(PLAITS),1)
 DEFS    += -DSG_PLAITS=1 -DSG_FIX_SAMPLERATE=1

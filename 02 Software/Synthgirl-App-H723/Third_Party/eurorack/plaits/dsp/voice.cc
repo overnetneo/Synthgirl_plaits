@@ -28,6 +28,11 @@
 
 #include "plaits/dsp/voice.h"
 #include "plaits/user_data.h"
+#if defined(SG_PLAITS)
+#include "sg_diag.h"
+#else
+#define SG_CRUMB(x) ((void)0)
+#endif
 
 namespace plaits {
 
@@ -131,8 +136,11 @@ void Voice::Render(
     if (!data && engine_index >= 2 && engine_index <= 4) {
       data = fm_patches_table[engine_index - 2];
     }
+    SG_CRUMB(0x200 | engine_index);
     e->LoadUserData(data);
+    SG_CRUMB(0x300 | engine_index);
     e->Reset();
+    SG_CRUMB(0x400 | engine_index);
 
     out_post_processor_.Reset();
     previous_engine_index_ = engine_index;
@@ -225,7 +233,9 @@ void Voice::Render(
       1.0f);
 
   bool already_enveloped = pp_s.already_enveloped;
+  SG_CRUMB(0x500 | engine_index);
   e->Render(p, out_buffer_, aux_buffer_, size, &already_enveloped);
+  SG_CRUMB(0x600 | engine_index);
   
   bool lpg_bypass = already_enveloped || \
       (!modulations.level_patched && !modulations.trigger_patched);
@@ -246,6 +256,7 @@ void Voice::Render(
     lpg_envelope_.Init();
   }
   
+  SG_CRUMB(0x700 | engine_index);
   out_post_processor_.Process(
       pp_s.out_gain,
       lpg_bypass,

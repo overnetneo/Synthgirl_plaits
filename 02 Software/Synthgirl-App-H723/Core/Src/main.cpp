@@ -10,6 +10,7 @@
 #include "sdmmc.h"
 #include "tim.h"
 #include "usart.h"
+#include "sg_diag.h"
 
 extern "C" void SystemClock_Config();
 extern "C" void PeriphCommonClock_Config();
@@ -39,6 +40,9 @@ int main() {
     PeriphCommonClock_Config();
 
     System_Initialize();
+#if SG_DIAG
+    sgDiag_init();
+#endif
     Sdram_Initialize();
 
     controller.initialize();

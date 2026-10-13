@@ -172,6 +172,14 @@ SECTIONS
     . = ALIGN(8);
   } >DTCMRAM
 
+  /* Diagnose-Daten im SRAM4 (RAM_D3): werden beim Start nicht geloescht */
+  .diag_noinit (NOLOAD) :
+  {
+    . = ALIGN(4);
+    *(.diag_noinit)
+    *(.diag_noinit*)
+  } >RAM_D3
+
   /* Remove information from the standard libraries */
   /DISCARD/ :
   {

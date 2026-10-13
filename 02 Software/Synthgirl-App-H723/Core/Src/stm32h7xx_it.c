@@ -105,6 +105,7 @@ void NMI_Handler(void)
 /**
   * @brief This function handles Hard fault interrupt.
   */
+#if !SG_DIAG
 void HardFault_Handler(void)
 {
   /* USER CODE BEGIN HardFault_IRQn 0 */
@@ -116,10 +117,12 @@ void HardFault_Handler(void)
     /* USER CODE END W1_HardFault_IRQn 0 */
   }
 }
+#endif
 
 /**
   * @brief This function handles Memory management fault.
   */
+#if !SG_DIAG
 void MemManage_Handler(void)
 {
   /* USER CODE BEGIN MemoryManagement_IRQn 0 */
@@ -131,10 +134,12 @@ void MemManage_Handler(void)
     /* USER CODE END W1_MemoryManagement_IRQn 0 */
   }
 }
+#endif
 
 /**
   * @brief This function handles Pre-fetch fault, memory access fault.
   */
+#if !SG_DIAG
 void BusFault_Handler(void)
 {
   /* USER CODE BEGIN BusFault_IRQn 0 */
@@ -146,10 +151,12 @@ void BusFault_Handler(void)
     /* USER CODE END W1_BusFault_IRQn 0 */
   }
 }
+#endif
 
 /**
   * @brief This function handles Undefined instruction or illegal state.
   */
+#if !SG_DIAG
 void UsageFault_Handler(void)
 {
   /* USER CODE BEGIN UsageFault_IRQn 0 */
@@ -161,6 +168,7 @@ void UsageFault_Handler(void)
     /* USER CODE END W1_UsageFault_IRQn 0 */
   }
 }
+#endif
 
 /**
   * @brief This function handles System service call via SWI instruction.
